@@ -107,6 +107,10 @@ func (e *Error) HelpIf(help string, condition func() bool) *Error {
 	return e
 }
 
+func (e *Error) HelpFunc(fn func() string) *Error {
+	return e.Help(fn())
+}
+
 func (e *Error) Note(note string) *Error {
 	if note == "" {
 		return e

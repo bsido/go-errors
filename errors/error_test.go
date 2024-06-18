@@ -69,17 +69,29 @@ error: wrapped
 		},
 		{
 			name: "helps",
-			err: New("notes").
+			err: New("helps").
 				Cause(errors.New("cause of the 1st error\nplain error")).
 				Help("do this \nbecause of reasons").
 				Help("also \ndo that"),
-			expected: `error: notes
+			expected: `error: helps
   --> cause of the 1st error
    | plain error
    = help: do this 
            because of reasons
    = help: also 
            do that`,
+		},
+		{
+			name: "help func",
+			err: New("helps").
+				Cause(errors.New("cause of the 1st error\nplain error")).
+				HelpFunc(func() string { return "do this \nbecause of reasons" }).
+				HelpFunc(func() string { return "" }), // this is empty so it does not appear in the output
+			expected: `error: helps
+  --> cause of the 1st error
+   | plain error
+   = help: do this 
+           because of reasons`,
 		},
 		{
 			name: "rust like error",

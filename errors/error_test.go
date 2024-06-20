@@ -148,6 +148,34 @@ error[E0277]: '&str' is not an iterator
 			expected: `error: overridden message
   --> original cause`,
 		},
+		{
+			name: "suggestions for empty input",
+			err:  New("test").SuggestValue("", []string{"one", "two"}),
+			expected: `error: test
+   = help: available values:
+           - one
+           - two`,
+		},
+		{
+			name: "suggestions: found only one suggestion",
+			err:  New("test").SuggestValue("on", []string{"one", "two"}),
+			expected: `error: test
+   = help: did you mean: 'one'?`,
+		},
+		{
+			name: "suggestions: distance is longer than the input",
+			err:  New("test").SuggestValue("o", []string{"one", "two"}),
+			expected: `error: test
+   = help: available values:
+           - one
+           - two`,
+		},
+		{
+			name: "suggestions: distance same as input length but there is an other suggestion",
+			err:  New("test").SuggestValue("yamamo", []string{"yamagawaka", "yamamoto"}),
+			expected: `error: test
+   = help: did you mean: 'yamamoto'?`,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.expected, tt.err.Error())

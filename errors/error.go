@@ -1,11 +1,17 @@
 package errors
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"log"
 	"maps"
+	"slices"
 	"strings"
+
+	expmaps "golang.org/x/exp/maps"
+
+	"github.com/agext/levenshtein"
 )
 
 type Error struct {
@@ -167,4 +173,60 @@ func (e *Error) Error() string {
 
 func (e *Error) WrappedErrors() []error {
 	return e.wrapped
+}
+
+// SuggestValue provides suggestions for the input based on the available values.
+// useful when the error occurs because of a wrong input value.
+// if the input is an emtpy string it will suggest all available values.
+func (e *Error) SuggestValue(input string, available []string) *Error {
+	if input == "" {
+		e.suggestValuesHelp(available, true)
+		return e
+	}
+
+	distances := make(map[string]int)
+
+	for _, item := range available {
+		distances[item] = levenshtein.Distance(input, item, nil)
+	}
+
+	// dist = 0           >> the input is the same as the item
+	// dist >= len(input) >> the input does not contain the item
+	maps.DeleteFunc(distances, func(item string, dist int) bool {
+		return dist >= len(input)
+	})
+
+	if len(distances) == 0 {
+		slices.Sort(available)
+		e.suggestValuesHelp(available, true)
+	} else {
+		suggested := expmaps.Keys(distances)
+
+		slices.SortFunc(suggested, func(a, b string) int {
+			return cmp.Compare(distances[a], distances[b])
+		})
+
+		e.suggestValuesHelp(suggested, false)
+	}
+
+	return e
+}
+
+func (e *Error) suggestValuesHelp(suggestions []string, all bool) {
+	if len(suggestions) == 1 {
+		e.helps = append(e.helps, fmt.Sprintf("did you mean: '%s'?", suggestions[0]))
+		return
+	}
+
+	sb := strings.Builder{}
+
+	if all {
+		sb.WriteString("available values:\n- ")
+	} else {
+		sb.WriteString("did you mean any of these?\n- ")
+	}
+
+	sb.WriteString(strings.Join(suggestions, "\n- "))
+
+	e.helps = append(e.helps, sb.String())
 }
